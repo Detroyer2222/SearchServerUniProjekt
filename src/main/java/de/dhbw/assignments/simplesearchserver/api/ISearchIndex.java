@@ -63,7 +63,7 @@ public interface ISearchIndex
 	 * @throws SearchIndexException Wenn sich das zu l&ouml;schende Dokument nicht
 	 *                              im Index befindet.
 	 */
-	void removeDocument(final String p_documentUri) throws SearchIndexException, IOException;
+	void removeDocument(final String p_documentUri) throws SearchIndexException;
 
 	/**
 	 * Gibt an, ob ein Dokument sich im Index befindet.

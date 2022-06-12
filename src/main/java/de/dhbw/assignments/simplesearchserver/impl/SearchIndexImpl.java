@@ -89,7 +89,7 @@ public class SearchIndexImpl implements ISearchIndex
     }
 
     @Override
-    public void removeDocument(String p_documentUri) throws SearchIndexException, IOException
+    public void removeDocument(String p_documentUri) throws SearchIndexException
     {
         if (!containsDocument(p_documentUri))
         {
@@ -126,6 +126,9 @@ public class SearchIndexImpl implements ISearchIndex
                 writer.write(line);
                 writer.newLine();
             }
+        } catch (IOException e)
+        {
+            e.printStackTrace();
         }
         _documents--;
     }
@@ -331,7 +334,7 @@ public class SearchIndexImpl implements ISearchIndex
         return null;
     }
 
-    private List<Integer> GetLines(String text) throws IOException
+    private List<Integer> GetLines(String text)
     {
         List<Integer> lines = new ArrayList<>();
 
@@ -346,7 +349,11 @@ public class SearchIndexImpl implements ISearchIndex
                 index++;
             }
             return lines;
+        } catch (IOException e)
+        {
+            e.printStackTrace();
         }
+        return new ArrayList<>();
     }
 
     private List<String> GetLines(ATokenizer tokenizer) throws IOException

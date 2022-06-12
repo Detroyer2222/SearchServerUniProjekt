@@ -4,10 +4,7 @@ import de.dhbw.assignments.simplesearchserver.api.ATokenizer;
 import de.dhbw.assignments.simplesearchserver.api.ISearchIndex;
 import de.dhbw.assignments.simplesearchserver.api.SearchIndexException;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
+import java.io.*;
 import java.util.Collection;
 import java.util.UUID;
 
@@ -95,5 +92,20 @@ public class SearchIndexImpl implements ISearchIndex
 
     }
 
+    private int GetLineOfText(String text) throws IOException
+    {
+        BufferedReader reader = new BufferedReader(new FileReader(_sessionFile));
+        String line;
+        int lineNumber = 0;
+        while ((line = reader.readLine()) != null)
+        {
+            lineNumber++;
+            if(line.contains(text))
+            {
+                return lineNumber;
+            }
+        }
+        return -1;
+    }
 
 }

@@ -6,15 +6,13 @@ import de.dhbw.assignments.simplesearchserver.api.ISearchIndex;
 import de.dhbw.assignments.simplesearchserver.api.SearchIndexException;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class SearchIndexImpl implements ISearchIndex
 {
     private File _directory = new File("./indexFiles");
     private File _sessionFile;
+    private int _documents = 0;
 
     //constructor
     public SearchIndexImpl()
@@ -40,7 +38,7 @@ public class SearchIndexImpl implements ISearchIndex
     public void addDocument(ATokenizer p_content, String p_documentUri) throws SearchIndexException, IOException
     {
         //Check if document already is in index
-        if (containsDocument(p_documentUri))
+        if (!containsDocument(p_documentUri))
         {
             throw new SearchIndexException("Document: "+ p_documentUri +" already exists");
         }
@@ -87,12 +85,49 @@ public class SearchIndexImpl implements ISearchIndex
                 }
             }
         }
+        _documents++;
     }
 
     @Override
-    public void removeDocument(String p_documentUri) throws SearchIndexException
+    public void removeDocument(String p_documentUri) throws SearchIndexException, IOException
     {
+        if (!containsDocument(p_documentUri))
+        {
+            throw  new SearchIndexException("Document: "+ p_documentUri +"does not exist");
+        }
 
+        List<String> file = GetLines();
+        List<Integer> linesOfDocument = GetLines(p_documentUri);
+
+        for (var lineNumber : linesOfDocument)
+        {
+            String line = file.get(lineNumber);
+            var lineArguments = line.split(";");
+            if (lineArguments.length < 3)
+            {
+                //line can be removed its only from this one document
+                file.remove(lineNumber);
+            }
+
+            int index = line.indexOf(p_documentUri);
+            int lastIndex = index + p_documentUri.length();
+
+            StringBuilder stringBuilder = new StringBuilder(line);
+            stringBuilder.substring(index, lastIndex);
+
+            file.remove(lineNumber);
+            file.add(lineNumber, stringBuilder.toString());
+        }
+
+        try(BufferedWriter writer = new BufferedWriter(new FileWriter(_sessionFile)))
+        {
+            for (var line : file)
+            {
+                writer.write(line);
+                writer.newLine();
+            }
+        }
+        _documents--;
     }
 
     @Override
@@ -109,43 +144,115 @@ public class SearchIndexImpl implements ISearchIndex
     @Override
     public void clear() throws SearchIndexException
     {
-
+        try
+        {
+            new FileWriter(_sessionFile).close();
+        }
+        catch (Exception e)
+        {
+            throw  new SearchIndexException("Couldnt clear index");
+        }
     }
 
     @Override
     public Collection<String> searchDocuments(String p_query, SearchOperator p_operator) throws SearchIndexException, IOException
     {
-        return null;
+        ATokenizer tokenizer;
+        try(BufferedReader reader = new BufferedReader(new StringReader(p_query)))
+        {
+            tokenizer = TokenizerFactory.createNewTokenizer(reader);
+        }
+
+        return searchDocuments(tokenizer, p_operator);
     }
 
     @Override
     public Collection<String> searchDocuments(ATokenizer p_query, SearchOperator p_operator) throws SearchIndexException, IOException
     {
-        return null;
+        Collection<String> results = new HashSet<>();
+
+        List<String> lines = GetLines(p_query);
+
+        if (lines.size() == 0)
+        {
+            //no query parameter exists
+            return results;
+        }
+
+        switch (p_operator)
+        {
+            case AND:
+
+                for (int i = 0; i < lines.size(); i++)
+                {
+                    var lineArguments = lines.get(i).split(";");
+                    lineArguments[0] = "";
+                    var argumentList = new ArrayList<String>(Arrays.asList(lineArguments));
+                    if (i < 1)
+                    {
+                        for (int j = 1; j < lineArguments.length - 1; j++)
+                        {
+                            results.add(lineArguments[j]);
+                        }
+                    }
+
+                    for (String result : results)
+                    {
+                        if (!argumentList.contains(result))
+                        {
+                            results.remove(result);
+                        }
+                    }
+                }
+                return results;
+
+            case OR:
+                for (String line : lines)
+                {
+                    var lineArguments = line.split(";");
+                    for (int i = 1; i < lineArguments.length - 1; i++)
+                    {
+                        results.add(lineArguments[i]);
+                    }
+                }
+                return results;
+        }
+        return new HashSet<>();
     }
 
     @Override
     public int size()
     {
-        return 0;
+        return _documents;
     }
 
     @Override
     public int tokenCount()
     {
-        return 0;
+        return GetLines().size();
     }
 
     @Override
     public void load(Reader p_indexReader) throws SearchIndexException, IOException
     {
-
+        try(BufferedWriter writer = new BufferedWriter(new FileWriter(_sessionFile)))
+        {
+            writer.write(p_indexReader.toString());
+        }
     }
 
     @Override
     public void save(Writer p_indexWriter) throws SearchIndexException, IOException
     {
-
+        try(BufferedReader reader = new BufferedReader(new FileReader(_sessionFile)))
+        {
+            String line = reader.readLine();
+            while (line != null)
+            {
+                p_indexWriter.write(line);
+                line = reader.readLine();
+            }
+        }
     }
 
     private int GetLine(String text)
@@ -174,28 +281,21 @@ public class SearchIndexImpl implements ISearchIndex
         return -1;
     }
 
-    private String GetLine(int lineNumber)
+    private String GetLine(int lineNumber) throws IOException
     {
         String line;
-        try
+
+        try(BufferedReader reader = new BufferedReader(new FileReader(_sessionFile)))
         {
-            try(BufferedReader reader = new BufferedReader(new FileReader(_sessionFile)))
+            int index = 0;
+            while((line = reader.readLine()) != null)
             {
-                int index = 0;
-                while((line = reader.readLine()) != null)
+                if (lineNumber == index)
                 {
-                    if (lineNumber == index)
-                    {
-                        return line;
-                    }
-                    index++;
+                    return line;
                 }
+                index++;
             }
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-            return null;
         }
 
         return line;
@@ -211,14 +311,12 @@ public class SearchIndexImpl implements ISearchIndex
     private List<String> GetLines()
     {
         List<String> lines = new ArrayList<>();
-        try
-        {
-            try(BufferedReader reader = new BufferedReader(new FileReader(_sessionFile)))
-            {
+
+        try {
+            try (BufferedReader reader = new BufferedReader(new FileReader(_sessionFile))) {
                 int index = 0;
                 String line;
-                while((line = reader.readLine()) != null)
-                {
+                while ((line = reader.readLine()) != null) {
                     lines.add(line);
                     index++;
                 }
@@ -228,32 +326,53 @@ public class SearchIndexImpl implements ISearchIndex
         catch (IOException e)
         {
             e.printStackTrace();
-            return null;
+        }
+
+        return null;
+    }
+
+    private List<Integer> GetLines(String text) throws IOException
+    {
+        List<Integer> lines = new ArrayList<>();
+
+        try(BufferedReader reader = new BufferedReader(new FileReader(_sessionFile)))
+        {
+            int index = 0;
+            String line;
+            while((line = reader.readLine()) != null)
+            {
+                if (line.contains(text))
+                    lines.add(index);
+                index++;
+            }
+            return lines;
         }
     }
 
-    private List<Integer> GetLines(String text)
+    private List<String> GetLines(ATokenizer tokenizer) throws IOException
     {
-        List<Integer> lines = new ArrayList<>();
-        try
+        List<String> lines = new ArrayList<>();
+        List<String> searchArguments = new ArrayList<>();
+
+        for (String s : tokenizer)
         {
-            try(BufferedReader reader = new BufferedReader(new FileReader(_sessionFile)))
-            {
-                int index = 0;
-                String line;
-                while((line = reader.readLine()) != null)
-                {
-                    if (line.contains(text))
-                        lines.add(index);
-                    index++;
-                }
-                return lines;
-            }
+            searchArguments.add(s);
         }
-        catch (IOException e)
+
+        try(BufferedReader reader = new BufferedReader(new FileReader(_sessionFile)))
         {
-            e.printStackTrace();
-            return null;
+            String line;
+            while((line = reader.readLine()) != null)
+            {
+                var lineArguments = line.split(";");
+
+                for (String lineArgument : lineArguments)
+                {
+                    searchArguments.contains(lineArgument);
+                    lines.add(line);
+                }
+            }
+            return lines;
         }
     }
 }

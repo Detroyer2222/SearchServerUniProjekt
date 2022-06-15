@@ -26,7 +26,7 @@ public class SearchIndexImpl implements ISearchIndex
         //create a new session file
         try
         {
-            _sessionFile = new File(_directory, UUID.randomUUID() + ".txt");
+            _sessionFile = new File(_directory, UUID.randomUUID() + ".csv");
             _sessionFile.createNewFile();
         } catch (IOException e)
         {
@@ -187,13 +187,21 @@ public class SearchIndexImpl implements ISearchIndex
     public Collection<String> searchDocuments(ATokenizer p_query, SearchOperator p_operator) throws SearchIndexException, IOException
     {
         Collection<String> results = new HashSet<>();
+        List<String> lines;
+        try
+        {
+            lines = GetLines(p_query);
+        }
+        catch (Exception e)
+        {
+            throw new SearchIndexException("Could not search documents");
+        }
 
-        List<String> lines = GetLines(p_query);
 
         if (lines.size() == 0)
         {
             //no query parameter exists
-            return results;
+            throw new SearchIndexException("No query parameter exists");
         }
 
         switch (p_operator)

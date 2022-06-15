@@ -15,13 +15,13 @@ public class SearchIndexTest
         //create new search index
         SearchIndexImpl searchIndex = new SearchIndexImpl();
 
-        String document1 = "This is a document";
-        String document2 = "This is another document";
-        String document3 = "This is a third document";
+        String document1 = "elias peter lisa";
+        String document2 = "elias dieter lisa";
+        String document3 = "elias guenter lena";
 
         Reader doc1Reader = new StringReader(document1);
-        Reader doc2Reader = new StringReader(document1);
-        Reader doc3Reader = new StringReader(document1);
+        Reader doc2Reader = new StringReader(document2);
+        Reader doc3Reader = new StringReader(document3);
 
         //add some documents to the search index
         try
@@ -36,25 +36,22 @@ public class SearchIndexTest
         }
 
 
-        //search for a word
         try
         {
-            var result = searchIndex.searchDocuments("This is a", ISearchIndex.SearchOperator.OR);
-            System.out.println(result);
+            //search for a word
+            var resultAnd = searchIndex.searchDocuments("lisa peter", ISearchIndex.SearchOperator.AND);
+            var resultOr = searchIndex.searchDocuments("lisa peter", ISearchIndex.SearchOperator.OR);
+
+            //print the results
+            System.out.println("AND: " + resultAnd);
+            System.out.println("OR: " + resultOr);
+
         }
         catch (Exception e)
         {
             e.printStackTrace();
         }
 
-       try
-       {
-           searchIndex.removeDocument("document1");
-           searchIndex.removeDocument("document2");
-       }
-       catch (Exception e)
-       {
-           e.printStackTrace();
-       }
+
     }
 }

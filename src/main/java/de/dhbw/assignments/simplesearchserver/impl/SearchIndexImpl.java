@@ -113,10 +113,11 @@ public class SearchIndexImpl implements ISearchIndex
         {
             String line = file.get(lineNumber);
             var lineArguments = line.split(";");
-            if (lineArguments.length < 3)
+            if (lineArguments.length == 2)
             {
                 //line can be removed its only from this one document
                 file.remove(lineNumber.intValue());
+                file.add(lineNumber.intValue(), "remove");
             }
             else
             {
@@ -128,7 +129,7 @@ public class SearchIndexImpl implements ISearchIndex
                 String newLine = line.replace(p_documentUri +";", "");
 
                 file.remove(lineNumber.intValue());
-                file.add(lineNumber, newLine);
+                file.add(lineNumber.intValue(), newLine);
             }
         }
 
@@ -136,6 +137,10 @@ public class SearchIndexImpl implements ISearchIndex
         {
             for (var line : file)
             {
+                if (line.contains("remove"))
+                {
+                    continue;
+                }
                 writer.write(line);
                 writer.newLine();
             }
@@ -164,6 +169,7 @@ public class SearchIndexImpl implements ISearchIndex
         try
         {
             new FileWriter(_sessionFile).close();
+            _documents = 0;
         }
         catch (Exception e)
         {
@@ -208,26 +214,40 @@ public class SearchIndexImpl implements ISearchIndex
         {
             case AND:
 
+                int count = 0;
                 for (int i = 0; i < lines.size(); i++)
                 {
+
                     var lineArguments = lines.get(i).split(";");
                     lineArguments[0] = "";
-                    var argumentList = new ArrayList<String>(Arrays.asList(lineArguments));
+                    var argumentList = new ArrayList<String>();
                     for (int j = 0; j < lineArguments.length; j++)
                     {
                         if(!(lineArguments[j] == null || lineArguments[j].isEmpty()))
                         {
-                            results.add(lineArguments[j]);
+                            if (count > 0)
+                            {
+                                argumentList.add(lineArguments[j]);
+                            }
+                            else
+                            {
+                                results.add(lineArguments[j]);
+                            }
+
                         }
                     }
 
-                    for (String result : results)
+                    for (String argument : argumentList)
                     {
-                        if (!argumentList.contains(result))
+                        if(count > 0)
                         {
-                            results.remove(result);
+                            if (!results.contains(argument))
+                            {
+                                results.remove(argument);
+                            }
                         }
                     }
+                    count++;
                 }
                 return results;
             case OR:

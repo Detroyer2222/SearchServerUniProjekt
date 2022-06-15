@@ -20,8 +20,8 @@ public class SearchIndexTest
         String document3 = "This is a third document";
 
         Reader doc1Reader = new StringReader(document1);
-        Reader doc2Reader = new StringReader(document2);
-        Reader doc3Reader = new StringReader(document3);
+        Reader doc2Reader = new StringReader(document1);
+        Reader doc3Reader = new StringReader(document1);
 
         //add some documents to the search index
         try
@@ -35,20 +35,11 @@ public class SearchIndexTest
             e.printStackTrace();
         }
 
-        boolean searchResult = searchIndex.containsDocument("document1");
 
+        //search for a word
         try
         {
-            searchIndex.removeDocument("document3");
-        }
-        catch (SearchIndexException e)
-        {
-            e.printStackTrace();
-        }
-
-        try
-        {
-            var result = searchIndex.searchDocuments("another", ISearchIndex.SearchOperator.OR);
+            var result = searchIndex.searchDocuments("This is a", ISearchIndex.SearchOperator.OR);
             System.out.println(result);
         }
         catch (Exception e)
@@ -56,14 +47,14 @@ public class SearchIndexTest
             e.printStackTrace();
         }
 
-        try
-        {
-            var result = searchIndex.searchDocuments("This", ISearchIndex.SearchOperator.AND);
-            System.out.println(result);
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
+       try
+       {
+           searchIndex.removeDocument("document1");
+           searchIndex.removeDocument("document2");
+       }
+       catch (Exception e)
+       {
+           e.printStackTrace();
+       }
     }
 }

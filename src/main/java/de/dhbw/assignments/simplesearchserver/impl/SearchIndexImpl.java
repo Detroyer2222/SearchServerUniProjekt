@@ -235,9 +235,9 @@ public class SearchIndexImpl implements ISearchIndex
                 {
                     var lineArguments = line.split(";");
                     lineArguments[0] = "";
-                    for (int i = 0; i < lineArguments.length - 1; i++)
+                    for (int i = 0; i < lineArguments.length; i++)
                     {
-                        if(lineArguments[i] == null || lineArguments[i].isEmpty())
+                        if(!(lineArguments[i] == null || lineArguments[i].isEmpty()))
                         {
                             results.add(lineArguments[i]);
                         }

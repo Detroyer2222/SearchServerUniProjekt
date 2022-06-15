@@ -39,8 +39,8 @@ public class SearchIndexTest
         try
         {
             //search for a word
-            var resultAnd = searchIndex.searchDocuments("lisa peter", ISearchIndex.SearchOperator.AND);
-            var resultOr = searchIndex.searchDocuments("lisa peter", ISearchIndex.SearchOperator.OR);
+            var resultAnd = searchIndex.searchDocuments("lisa lena", ISearchIndex.SearchOperator.AND);
+            var resultOr = searchIndex.searchDocuments("lisa lena", ISearchIndex.SearchOperator.OR);
 
             //print the results
             System.out.println("AND: " + resultAnd);

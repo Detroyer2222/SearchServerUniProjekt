@@ -237,16 +237,30 @@ public class SearchIndexImpl implements ISearchIndex
                         }
                     }
 
-                    for (String argument : argumentList)
+                    Collection<String> bigger = new HashSet<>();
+                    Collection<String> smaller = new HashSet<>();
+                    if (argumentList.size() > results.size())
+                    {
+                        bigger.addAll(argumentList);
+                        smaller.addAll(results);
+                    }
+                    else
+                    {
+                        bigger.addAll(results);
+                        smaller.addAll(argumentList);
+                    }
+
+                    for (String result : bigger)
                     {
                         if(count > 0)
                         {
-                            if (!results.contains(argument))
+                            if (!smaller.contains(result))
                             {
-                                results.remove(argument);
+                                results.remove(result);
                             }
                         }
                     }
+
                     count++;
                 }
                 return results;

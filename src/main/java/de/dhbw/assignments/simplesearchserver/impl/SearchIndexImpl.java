@@ -24,13 +24,20 @@ public class SearchIndexImpl implements ISearchIndex
         }
 
         //create a new session file
-        _sessionFile = new File(_directory, UUID.randomUUID() + ".txt");
+        try
+        {
+            _sessionFile = new File(_directory, UUID.randomUUID() + ".txt");
+            _sessionFile.createNewFile();
+        } catch (IOException e)
+        {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void addDocument(Reader p_content, String p_documentUri) throws SearchIndexException, IOException
     {
-        ATokenizer tokenizer = TokenizerFactory.createNewTokenizer(p_content);
+        ATokenizer tokenizer = new TokenizerImpl(p_content);
         addDocument(tokenizer, p_documentUri);
     }
 
@@ -38,7 +45,7 @@ public class SearchIndexImpl implements ISearchIndex
     public void addDocument(ATokenizer p_content, String p_documentUri) throws SearchIndexException, IOException
     {
         //Check if document already is in index
-        if (!containsDocument(p_documentUri))
+        if (containsDocument(p_documentUri))
         {
             throw new SearchIndexException("Document: "+ p_documentUri +" already exists");
         }
@@ -52,7 +59,7 @@ public class SearchIndexImpl implements ISearchIndex
             if ((lineNumber = GetLine(token)) < 0)
             {
                 //Token does not exist in index
-                indexedFile.add(p_content.next() +";"+ p_documentUri +";");
+                indexedFile.add(token +";"+ p_documentUri +";");
             }
             else
             {
@@ -61,18 +68,21 @@ public class SearchIndexImpl implements ISearchIndex
                 String line = indexedFile.get(lineNumber);
                 int offset = GetOffset(line);
 
-                for (int i = 0; i < line.length(); i++) {
+                for (int i = 0; i < line.length(); i++)
+                {
 
                     // Insert the original string character
                     // into the new string
                     newLine += line.charAt(i);
 
-                    if (i == offset) {
+                    if (i == offset)
+                    {
 
                         // Insert the string to be inserted
                         // into the new string
                         newLine += (p_documentUri +";");
                     }
+                    indexedFile.set(lineNumber, newLine);
                 }
             }
 
@@ -93,7 +103,7 @@ public class SearchIndexImpl implements ISearchIndex
     {
         if (!containsDocument(p_documentUri))
         {
-            throw  new SearchIndexException("Document: "+ p_documentUri +"does not exist");
+            throw new SearchIndexException("Document: "+ p_documentUri +"does not exist");
         }
 
         List<String> file = GetLines();
@@ -106,17 +116,20 @@ public class SearchIndexImpl implements ISearchIndex
             if (lineArguments.length < 3)
             {
                 //line can be removed its only from this one document
-                file.remove(lineNumber);
+                file.remove(lineNumber.intValue());
             }
+            else
+            {
+                //line is in more than one document
+                int index = line.indexOf(p_documentUri);
+                int lastIndex = index + p_documentUri.length();
 
-            int index = line.indexOf(p_documentUri);
-            int lastIndex = index + p_documentUri.length();
+                //remove the document from the line
+                String newLine = line.replace(p_documentUri +";", "");
 
-            StringBuilder stringBuilder = new StringBuilder(line);
-            stringBuilder.substring(index, lastIndex);
-
-            file.remove(lineNumber);
-            file.add(lineNumber, stringBuilder.toString());
+                file.remove(lineNumber.intValue());
+                file.add(lineNumber, newLine);
+            }
         }
 
         try(BufferedWriter writer = new BufferedWriter(new FileWriter(_sessionFile)))
@@ -126,7 +139,8 @@ public class SearchIndexImpl implements ISearchIndex
                 writer.write(line);
                 writer.newLine();
             }
-        } catch (IOException e)
+        }
+        catch (IOException e)
         {
             e.printStackTrace();
         }
@@ -136,7 +150,7 @@ public class SearchIndexImpl implements ISearchIndex
     @Override
     public boolean containsDocument(String p_documentUri)
     {
-        if (GetLine(p_documentUri) < 0)
+        if (GetLine(p_documentUri) >= 0)
         {
             return true;
         }
@@ -163,7 +177,7 @@ public class SearchIndexImpl implements ISearchIndex
         ATokenizer tokenizer;
         try(BufferedReader reader = new BufferedReader(new StringReader(p_query)))
         {
-            tokenizer = TokenizerFactory.createNewTokenizer(reader);
+            tokenizer = new TokenizerImpl(reader);
         }
 
         return searchDocuments(tokenizer, p_operator);
@@ -191,9 +205,9 @@ public class SearchIndexImpl implements ISearchIndex
                     var lineArguments = lines.get(i).split(";");
                     lineArguments[0] = "";
                     var argumentList = new ArrayList<String>(Arrays.asList(lineArguments));
-                    if (i < 1)
+                    for (int j = 0; j < lineArguments.length; j++)
                     {
-                        for (int j = 1; j < lineArguments.length - 1; j++)
+                        if(!(lineArguments[j] == null || lineArguments[j].isEmpty()))
                         {
                             results.add(lineArguments[j]);
                         }
@@ -208,14 +222,17 @@ public class SearchIndexImpl implements ISearchIndex
                     }
                 }
                 return results;
-
             case OR:
                 for (String line : lines)
                 {
                     var lineArguments = line.split(";");
-                    for (int i = 1; i < lineArguments.length - 1; i++)
+                    lineArguments[0] = "";
+                    for (int i = 0; i < lineArguments.length - 1; i++)
                     {
-                        results.add(lineArguments[i]);
+                        if(lineArguments[i] == null || lineArguments[i].isEmpty())
+                        {
+                            results.add(lineArguments[i]);
+                        }
                     }
                 }
                 return results;
@@ -268,15 +285,18 @@ public class SearchIndexImpl implements ISearchIndex
                 int lineNumber = 0;
                 while ((line = reader.readLine()) != null)
                 {
-                    lineNumber++;
-                    if(line.contains(text))
+                    var words = line.split(";");
+                    var list = new ArrayList<String>(Arrays.asList(words));
+
+                    if(list.contains(text))
                     {
                         return lineNumber;
                     }
+                    lineNumber++;
                 }
             }
         }
-        catch (IOException e)
+        catch (Exception e)
         {
             e.printStackTrace();
         }
@@ -344,8 +364,11 @@ public class SearchIndexImpl implements ISearchIndex
             String line;
             while((line = reader.readLine()) != null)
             {
+                var words = line.split(";");
                 if (line.contains(text))
+                {
                     lines.add(index);
+                }
                 index++;
             }
             return lines;
@@ -375,8 +398,10 @@ public class SearchIndexImpl implements ISearchIndex
 
                 for (String lineArgument : lineArguments)
                 {
-                    searchArguments.contains(lineArgument);
-                    lines.add(line);
+                    if (searchArguments.contains(lineArgument))
+                    {
+                        lines.add(line);
+                    }
                 }
             }
             return lines;

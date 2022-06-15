@@ -2,11 +2,17 @@ package de.dhbw.assignments.simplesearchserver.impl;
 
 import de.dhbw.assignments.simplesearchserver.api.ATokenizer;
 
+import java.io.IOException;
 import java.io.Reader;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Queue;
 
 public class TokenizerImpl extends ATokenizer
 {
     private int _position = 0;
+    private Queue<String> _tokens;
 
     /**
      * Erzeugt einen neuen Tokenizer.
@@ -17,45 +23,46 @@ public class TokenizerImpl extends ATokenizer
     protected TokenizerImpl(Reader p_reader)
     {
         super(p_reader);
+        GetTokens(p_reader);
+    }
+
+    private void GetTokens(Reader p_reader)
+    {
+        StringBuilder sb = new StringBuilder();
+        _tokens = new LinkedList<String>();
+
+        char[] buffer = new char[1024];
+        int read = 0;
+        while (true)
+        {
+            try
+            {
+                if (!((read = p_reader.read(buffer)) > 0)) break;
+            } catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+            sb.append(buffer, 0, read);
+        }
+
+        String tokens = sb.toString();
+
+        for (String token : tokens.split(" "))
+        {
+            _tokens.add(token);
+        }
     }
 
     @Override
     protected String extractNextToken()
     {
-
-        String l_token = "";
-
-        if(_position >= m_reader.toString().length() )
+        if (_position >= _tokens.size())
         {
             return null;
         }
-
-        for(int i = _position; i < this.m_reader.toString().length(); i++)
+        else
         {
-            char l_char = m_reader.toString().charAt(i);
-            if( Character.isLetterOrDigit(l_char) )
-            {
-                break;
-            }
-            _position++;
+            return _tokens.remove();
         }
-
-        for(int i = _position; i < this.m_reader.toString().length(); i++)
-        {
-            _position++;
-
-            char l_char = m_reader.toString().charAt(i);
-
-            if( Character.isLetterOrDigit(l_char) )
-            {
-                l_token = l_token + l_char;
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        return l_token;
     }
 }
